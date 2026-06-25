@@ -1,0 +1,417 @@
+// ==============================================================================
+// 🧠 MOTOR TECNOCLAN & SABER EN PIEZAS - ESQUEMA BASE DE DATOS (POSTGRESQL)
+// ==============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==============================================================================
+// 📌 1. ENUMS (Listas de valores predefinidos)
+// ==============================================================================
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  PADRE
+  GOBIERNO
+}
+
+enum Brand {
+  TECNOCLAN
+  SABER_EN_PIEZAS
+}
+
+enum SubscriptionStatus {
+  ACTIVA
+  MOROSA
+  PATROCINADA
+  CANCELADA
+}
+
+enum BillingFrequency {
+  SEMANAL
+  QUINCENAL
+  MENSUAL
+  UN_SOLO_PAGO
+}
+
+enum TransactionStatus {
+  SUCCESS
+  PENDING
+  FAILED
+}
+
+enum KitStatus {
+  ACTIVO
+  MANTENIMIENTO
+  ALMACENADO
+}
+
+enum ItemType {
+  CONSUMIBLE
+  ACTIVO_FIJO
+}
+
+enum SentimentState {
+  DETRACTOR
+  NEUTRAL
+  PROMOTOR
+}
+
+enum TicketCategory {
+  HARDWARE
+  SOFTWARE
+  DIDACTICA
+  PAGOS
+  LOGISTICA
+}
+
+enum TicketStatus {
+  ABIERTO
+  EN_PROCESO
+  RESUELTO
+  CERRADO_SIN_EXITO
+}
+
+enum PayoutStatus {
+  PENDIENTE
+  PAGADO
+}
+
+// ==============================================================================
+// 👥 2. USUARIOS, INSTITUCIONES Y FAMILIA (B2C y B2B)
+// ==============================================================================
+
+model User {
+  id               String         @id @default(uuid())
+  nombreCompleto   String
+  email            String         @unique
+  passwordHash     String
+  telefono         String?
+  role             Role           @default(PADRE)
+  
+  // Crecimiento Orgánico (Customer Success - Referidos)
+  referredById     String?
+  referredBy       User?          @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals        User[]         @relation("UserReferrals")
+
+  // Relaciones
+  students         Student[]
+  subscriptions    Subscription[]
+  tickets          SupportTicket[]
+  institutionId    String?
+  institution      Institution?   @relation(fields: [institutionId], references: [id])
+  cohortsTaught    Cohort[]       @relation("InstructorCohorts")
+  payouts          InstructorPayout[]
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Institution {
+  id               String         @id @default(uuid())
+  nombre           String         
+  tipo             String         
+  contactoNombre   String?
+  contactoEmail    String?
+
+  users            User[]         
+  students         Student[]      
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Student {
+  id                     String         @id @default(uuid())
+  nombre                 String
+  fechaNacimiento        DateTime
+  
+  parentId               String?
+  parent                 User?          @relation(fields: [parentId], references: [id])
+  institutionId          String?
+  institution            Institution?   @relation(fields: [institutionId], references: [id])
+  
+  // Telemetría y Gamificación
+  currentWeek            Int            @default(1)
+  currentProjectStatus   Float          @default(0.0) 
+  puntosClanes           Int            @default(0)   
+  
+  enrollments            Enrollment[]
+  projectChecklists      ProjectChecklist[]
+  telemetryLogs          TelemetryLog[]
+
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+}
+
+// ==============================================================================
+// 📦 3. LOGÍSTICA, HARDWARE E INVENTARIO (Físico y Consumibles)
+// ==============================================================================
+
+model Hub {
+  id               String         @id @default(uuid())
+  nombre           String         
+  direccion        String
+  municipio        String
+  coordenadas      String?        
+
+  cohorts          Cohort[]
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model MobileKit {
+  id                    String         @id @default(uuid())
+  nombre                String         
+  estacionesDisponibles Int           @default(5)
+  status                KitStatus      @default(ACTIVO)
+
+  componentes          KitComponent[]
+  cohorts              Cohort[]
+  inventoryLogs        InventoryLog[] 
+
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+}
+
+model KitComponent {
+  id           String         @id @default(uuid())
+  kitId        String
+  kit          MobileKit      @relation(fields: [kitId], references: [id])
+  
+  nombre       String         
+  especificacio String        
+  cantidad     Int            
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([kitId, nombre]) 
+}
+
+model InventoryItem {
+  id               String         @id @default(uuid())
+  nombre           String         
+  tipo             ItemType       @default(CONSUMIBLE)
+  marca            Brand          
+  stockActual      Int            @default(0)
+  stockMinimo      Int            @default(10) 
+  costoUnitario    Float          
+
+  logs             InventoryLog[]
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model InventoryLog {
+  id               String         @id @default(uuid())
+  itemId           String
+  item             InventoryItem  @relation(fields: [itemId], references: [id])
+  kitId            String?
+  kit              MobileKit?     @relation(fields: [kitId], references: [id])
+  
+  cantidadCambio   Int            
+  motivo           String         
+  
+  fecha            DateTime       @default(now())
+}
+
+// ==============================================================================
+// 🎓 4. ACADEMIA Y OPERACIÓN (Multimarca)
+// ==============================================================================
+
+model Workshop {
+  id               String         @id @default(uuid())
+  titulo           String         
+  marca            Brand
+  duracionSemanas  Int            @default(4)
+  precioBase       Float          @default(2500.0)
+
+  cohorts          Cohort[]
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Cohort {
+  id               String         @id @default(uuid())
+  workshopId       String
+  workshop         Workshop       @relation(fields: [workshopId], references: [id])
+  hubId            String
+  hub              Hub            @relation(fields: [hubId], references: [id])
+  kitId            String
+  kit              MobileKit      @relation(fields: [kitId], references: [id])
+  instructorId     String
+  instructor       User           @relation("InstructorCohorts", fields: [instructorId], references: [id])
+  
+  fechaInicio      DateTime
+  horario          String         
+
+  enrollments      Enrollment[]
+  attendanceLogs   AttendanceLog[]
+  checklists       ProjectChecklist[]
+  telemetryLogs    TelemetryLog[]
+  payouts          InstructorPayout[]
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Enrollment {
+  id               String         @id @default(uuid())
+  studentId        String
+  student          Student        @relation(fields: [studentId], references: [id])
+  cohortId         String
+  cohort           Cohort         @relation(fields: [cohortId], references: [id])
+  
+  enrolledAt       DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  
+  attendanceLogs   AttendanceLog[]
+
+  @@unique([studentId, cohortId])
+}
+
+// ==============================================================================
+// ✅ 5. ASISTENCIA Y MÉTRICAS DE CLASE (El Termómetro de Churn)
+// ==============================================================================
+
+model AttendanceLog {
+  id               String         @id @default(uuid())
+  enrollmentId     String
+  enrollment       Enrollment     @relation(fields: [enrollmentId], references: [id])
+  cohortId         String
+  cohort           Cohort         @relation(fields: [cohortId], references: [id])
+  
+  fechaClase       DateTime
+  semanaNum        Int            
+  presente         Boolean        @default(false)
+  observaciones    String?        
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([enrollmentId, fechaClase])
+}
+
+// ==============================================================================
+// 💵 6. FINANZAS, PAGOS RECURRENTES Y FIDELIZACIÓN (LTV)
+// ==============================================================================
+
+model Subscription {
+  id                   String              @id @default(uuid())
+  parentId             String
+  parent               User                @relation(fields: [parentId], references: [id])
+  status               SubscriptionStatus  @default(ACTIVA)
+  
+  planIdMercadoPago    String?             
+  frecuenciaCobro      BillingFrequency    @default(SEMANAL)
+  
+  pagosEsperados       Int                 @default(4) 
+  pagosRealizados      Int                 @default(0) 
+  inscripcionPagada    Boolean             @default(false) 
+  
+  renovacionAutomatica Boolean             @default(false) 
+  moduloActual         Int                 @default(1)     
+  
+  transactions         Transaction[]
+  
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+}
+
+model Transaction {
+  id               String              @id @default(uuid())
+  subscriptionId   String
+  subscription     Subscription        @relation(fields: [subscriptionId], references: [id])
+  monto            Float
+  gatewayId        String?             
+  status           TransactionStatus   @default(PENDING)
+  
+  fechaTransaccion DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+}
+
+model InstructorPayout {
+  id               String         @id @default(uuid())
+  instructorId     String
+  instructor       User           @relation(fields: [instructorId], references: [id])
+  cohortId         String
+  cohort           Cohort         @relation(fields: [cohortId], references: [id])
+  
+  monto            Float
+  fechaPago        DateTime
+  status           PayoutStatus   @default(PENDIENTE)
+  referenciaPago   String?        
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+// ==============================================================================
+// 🛠️ 7. CUSTOMER SUCCESS Y TELEMETRÍA AVANZADA
+// ==============================================================================
+
+model SupportTicket {
+  id               String         @id @default(uuid())
+  userId           String         
+  user             User           @relation(fields: [userId], references: [id])
+  
+  asunto           String         
+  descripcion      String         @db.Text
+  sentiment        SentimentState @default(NEUTRAL)
+  category         TicketCategory 
+  status           TicketStatus   @default(ABIERTO)
+  resolucion       String?        @db.Text 
+  feedbackScore    Int?           
+  
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model ProjectChecklist {
+  id               String         @id @default(uuid())
+  studentId        String
+  student          Student        @relation(fields: [studentId], references: [id])
+  cohortId         String
+  cohort           Cohort         @relation(fields: [cohortId], references: [id])
+  
+  semana           Int      
+  hitoNombre       String         
+  completado       Boolean        @default(false)
+  fechaLogro       DateTime?
+  
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([studentId, cohortId, hitoNombre]) 
+}
+
+model TelemetryLog {
+  id               String         @id @default(uuid())
+  studentId        String
+  student          Student        @relation(fields: [studentId], references: [id])
+  cohortId         String
+  cohort           Cohort         @relation(fields: [cohortId], references: [id])
+  
+  ideLogins        Int            @default(0)  
+  compilationFails Int            @default(0)  
+  bytesUploaded    Int            @default(0)  
+  hardwarePings    Int            @default(0)  
+  
+  lastActive       DateTime       @default(now())
+  
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([studentId, cohortId])
+}
