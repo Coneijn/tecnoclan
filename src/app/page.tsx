@@ -10,7 +10,7 @@ import Footer from '@/components/landing/Footer';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-zinc-950 text-white antialiased">
+    <main className="min-h-screen bg-clan-bg  text-clan-text antialiased">
       {/* 1. Navegación */}
       <Navbar />
       

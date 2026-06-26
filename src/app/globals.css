@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@theme {
+  /* 🎨 Paleta de Colores Oficial TecnoClan (El 95% de la interfaz) */
+  --color-clan-bg: #2F3238;          /* Gris Carbón */
+  --color-clan-text: #EAE4D9;        /* Crema / Blanco Cálido */
+  --color-clan-action: #FF7643;      /* Naranja Coral (Botones/Acciones principales) */
+  
+  /* 💡 El "Glow" Digital (Retroiluminación del teclado) */
+  --color-clan-glow-cian: #00E5FF;   /* Azul Cian Eléctrico */
+  --color-clan-glow-verde: #52FF00;  /* Verde Lima Neón */
+  --color-clan-glow-morado: #A855F7; /* Morado RGB avisos luxury! */
+
+  /* 🚨 Paleta de Colores Secundaria para contrastes (menos del 5% recomendado en pantalla) */
+  --color-clan-contrast-azul: #06B6D4;     /* Hielo (Contraste del Naranja) - Destacar sin alertar */
+  --color-clan-contrast-rojo: #EF4444;     /* Alerta (Contraste del Verde) - Errores y peligro */
+  --color-clan-contrast-amarillo: #F59E0B; /* Energía (Contraste del Morado) - Elementos Pro/Premium o advertencias */
+}
 :root {
   --background: #ffffff;
   --foreground: #171717;
