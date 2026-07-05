@@ -1,42 +1,35 @@
-@import "tailwindcss";
+/* SINTAXIS TAILWIND V4: 
+   Reemplaza a los antiguos @tailwind base, components, utilities */
+   @import "tailwindcss";
 
-@theme {
-  /* 🎨 Paleta de Colores Oficial TecnoClan (El 95% de la interfaz) */
-  --color-clan-bg: #2F3238;          /* Gris Carbón */
-  --color-clan-text: #EAE4D9;        /* Crema / Blanco Cálido */
-  --color-clan-action: #FF7643;      /* Naranja Coral (Botones/Acciones principales) */
-  
-  /* 💡 El "Glow" Digital (Retroiluminación del teclado) */
-  --color-clan-glow-cian: #00E5FF;   /* Azul Cian Eléctrico */
-  --color-clan-glow-verde: #52FF00;  /* Verde Lima Neón */
-  --color-clan-glow-morado: #A855F7; /* Morado RGB avisos luxury! */
-
-  /* 🚨 Paleta de Colores Secundaria para contrastes (menos del 5% recomendado en pantalla) */
-  --color-clan-contrast-azul: #06B6D4;     /* Hielo (Contraste del Naranja) - Destacar sin alertar */
-  --color-clan-contrast-rojo: #EF4444;     /* Alerta (Contraste del Verde) - Errores y peligro */
-  --color-clan-contrast-amarillo: #F59E0B; /* Energía (Contraste del Morado) - Elementos Pro/Premium o advertencias */
-}
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+   @layer base {
+     html, body {
+       /* Ahora sí reconocerá el bg-neutral-950 y demás utilidades */
+       @apply min-h-[100dvh] bg-neutral-950 text-neutral-50 antialiased;
+       overscroll-behavior-y: none;
+     }
+   }
+   
+   /* En Tailwind v4, las clases utilitarias personalizadas 
+      se declaran con la directiva @utility en lugar de @layer utilities */
+   
+   @utility bg-protoboard {
+     background-color: #121212;
+     background-image: radial-gradient(circle, #000000 2.5px, transparent 3px);
+     background-size: 24px 24px;
+     background-position: center center;
+   }
+   
+   @utility bg-protoboard-tech {
+     background-color: #0f172a;
+     background-image: radial-gradient(circle, #1e293b 2px, transparent 2.5px);
+     background-size: 20px 20px;
+   }
+   
+   @utility h-screen-dynamic {
+     height: 100dvh;
+   }
+   
+   @utility min-h-screen-dynamic {
+     min-height: 100dvh;
+   }

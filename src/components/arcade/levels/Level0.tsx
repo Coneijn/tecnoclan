@@ -4,31 +4,45 @@ import React, { useState, useRef } from 'react';
 import { Play, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CircuitComponent, LedComponent, SimulationState } from '../types';
-import DraggableItem from '../ui/DraggableItem';
 import CircuitBoard from '../ui/CircuitBoard';
+import ArcadeToolbox from '../ArcadeToolbox';
+import LevelInstructions from '../ui/LevelInstructions';
 
 const LEVEL_BATTERY: CircuitComponent = { id: 'bat-0', type: 'battery', value: 9, label: '9V' };
 const LEVEL_RESISTOR: CircuitComponent = { id: 'res-0', type: 'resistor', value: 330, label: '330Ω' };
-const LEVEL_LED: LedComponent = { id: 'led-0', type: 'led', polarity: 'correct' }; 
+const LEVEL_LED: LedComponent = { id: 'led-0', type: 'led', polarity: 'correct', color: 'red' }; 
 
 export default function Level0() {
+  // Estado de componentes colocados en el tablero
   const [boardBattery, setBoardBattery] = useState<CircuitComponent | null>(null);
   const [boardResistor, setBoardResistor] = useState<CircuitComponent | null>(null);
   const [boardLed, setBoardLed] = useState<LedComponent | null>(null);
 
+  // Estado de la simulación
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationState, setSimulationState] = useState<SimulationState>('idle');
   const [feedbackMsg, setFeedbackMsg] = useState('');
+  
+  // UX: Minimiza las instrucciones cuando el usuario coloca su primera pieza
+  const [hasStartedPlaying, setHasStartedPlaying] = useState(false);
 
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
   const handleDragEnd = (e: any, info: any, item: CircuitComponent | LedComponent) => {
     if (!dropZoneRef.current) return;
-    const rect = dropZoneRef.current.getBoundingClientRect();
-    const isInside = info.point.x >= rect.left && info.point.x <= rect.right &&
-                     info.point.y >= rect.top && info.point.y <= rect.bottom;
+    
+    // Solución al BUG del Scroll: Cálculo dinámico de la zona
+    const boardRect = dropZoneRef.current.getBoundingClientRect();
+    const pointerX = info.point.x;
+    const pointerY = info.point.y;
 
-    if (isInside) {
+    const isInsideDropZone = 
+      pointerX >= boardRect.left &&
+      pointerX <= boardRect.right &&
+      pointerY >= boardRect.top &&
+      pointerY <= boardRect.bottom;
+
+    if (isInsideDropZone) {
       if (item.type === 'led') setBoardLed(item as LedComponent);
       else if (item.type === 'battery') setBoardBattery(item as CircuitComponent);
       else if (item.type === 'resistor') setBoardResistor(item as CircuitComponent);
@@ -36,6 +50,7 @@ export default function Level0() {
       setIsSimulating(false);
       setSimulationState('idle');
       setFeedbackMsg('');
+      setHasStartedPlaying(true); // Oculta instrucciones para dar más espacio
     }
   };
 
@@ -69,127 +84,144 @@ export default function Level0() {
     setFeedbackMsg('');
   };
 
+  // Calculamos qué piezas quedan disponibles para el carrusel
+  const availableItems = [
+    !boardBattery && LEVEL_BATTERY,
+    !boardResistor && LEVEL_RESISTOR,
+    !boardLed && LEVEL_LED
+  ].filter(Boolean) as (CircuitComponent | LedComponent)[];
+
   return (
-    <div className="p-4 md:p-8 flex flex-col items-center">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-6xl">
+    <div className="flex flex-col h-full w-full max-w-4xl mx-auto relative">
+      
+      {/* 1. INSTRUCCIONES COLAPSABLES */}
+      <LevelInstructions 
+        title="Circuito Básico"
+        description="Todo circuito necesita una fuente de energía. Vamos a encender este LED usando una batería, pero ten cuidado con cuánta energía le envías."
+        objective="Arrastra la batería, el LED y la resistencia al tablero. ¡Si olvidas la resistencia el LED explotará!"
+        isMinimizedProp={hasStartedPlaying}
+      />
 
-        {/* CAJA DE HERRAMIENTAS */}
-        <div className={`col-span-1 bg-neutral-900 border-2 rounded-xl p-6 shadow-xl transition-all duration-500 ${isSimulating ? 'opacity-50 pointer-events-none border-neutral-800' : 'border-neutral-700'}`}>
-          <h2 className="text-xl font-semibold mb-4 border-b border-neutral-700 pb-2">Componentes</h2>
-          <p className="text-sm text-neutral-400 mb-6">Arrastra los componentes físicos hacia el circuito.</p>
-
-          <div className="space-y-4">
-            <div className="flex flex-col gap-4 items-start">
-              {!boardBattery && <DraggableItem item={LEVEL_BATTERY} onDragEnd={handleDragEnd} />}
-              {!boardResistor && <DraggableItem item={LEVEL_RESISTOR} onDragEnd={handleDragEnd} />}
-              {!boardLed && <DraggableItem item={LEVEL_LED} onDragEnd={handleDragEnd} />}
-            </div>
-          </div>
+      {/* 2. TABLERO DE JUEGO */}
+      <CircuitBoard
+        dropZoneRef={dropZoneRef}
+        isSimulating={isSimulating}
+        simulationState={simulationState}
+        ledPolarity={boardLed?.polarity}
+      >
+        {/* Portapilas (Izquierda) */}
+        <div className="absolute left-[2%] md:left-[10%] top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+          <AnimatePresence>
+            {boardBattery && (
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="drop-shadow-2xl">
+                 <svg viewBox="0 0 100 160" width="60" height="95" className="md:w-[70px] md:h-[110px]">
+                    <rect x="10" y="10" width="80" height="140" rx="10" fill="#222" stroke="#111" strokeWidth="4"/>
+                    <rect x="25" y="20" width="50" height="120" rx="5" fill="#444" />
+                    <circle cx="50" cy="35" r="8" fill="silver"/>
+                    <circle cx="50" cy="125" r="8" fill="silver"/>
+                    <text x="50" y="85" fill="#fbbf24" fontSize="16" fontWeight="bold" textAnchor="middle" transform="rotate(-90 50 85)">{boardBattery.label}</text>
+                    <text x="50" y="25" fill="#ef4444" fontSize="20" fontWeight="bold" textAnchor="middle">+</text>
+                    <text x="50" y="145" fill="#3b82f6" fontSize="24" fontWeight="bold" textAnchor="middle">-</text>
+                 </svg>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* TABLERO */}
-        <div className="col-span-1 lg:col-span-2 flex flex-col">
-          <CircuitBoard
-            dropZoneRef={dropZoneRef}
-            isSimulating={isSimulating}
-            simulationState={simulationState}
-            ledPolarity={boardLed?.polarity}
+        {/* Resistencia (Arriba) */}
+        <div className="absolute top-[2%] md:top-[10%] left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+          <AnimatePresence>
+            {boardResistor && (
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="relative drop-shadow-xl">
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="90" height="90" className="md:w-[120px] md:h-[120px] transform -translate-y-4">
+                    <line x1="0" y1="50" x2="100" y2="50" stroke="silver" strokeWidth="6"/>
+                    <rect x="20" y="35" width="60" height="30" rx="8" fill="#d2b48c" stroke="black" strokeWidth="2"/>
+                    <rect x="28" y="35" width="5" height="30" fill="#f44336"/> 
+                    <rect x="40" y="35" width="5" height="30" fill="#9c27b0"/> 
+                    <rect x="52" y="35" width="5" height="30" fill="#795548"/> 
+                    <rect x="68" y="35" width="5" height="30" fill="#ffd700"/> 
+                 </svg>
+                 <div className="absolute -top-4 md:-top-2 left-1/2 transform -translate-x-1/2 text-[10px] md:text-xs font-bold text-amber-200 bg-black/80 px-2 py-0.5 rounded">{boardResistor.label}</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* LED (Derecha) */}
+        <div className="absolute right-[4%] md:right-[10%] top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+          <AnimatePresence>
+            {boardLed && (
+              <motion.div 
+                initial={{ scale: 0 }} 
+                animate={{ scale: 1 }} 
+                exit={{ scale: 0 }}
+                className={`relative w-16 h-16 md:w-20 md:h-20 transition-all duration-300 z-10 ${
+                  simulationState === 'perfect' ? 'drop-shadow-[0_0_25px_rgba(239,68,68,1)]' :
+                  simulationState === 'exploded' ? 'opacity-0 scale-150 transition-all duration-100' : 'drop-shadow-lg'
+                }`}
+              >
+                <svg viewBox="0 0 100 100" width="100%" height="100%" className={`${boardLed.polarity === 'reversed' ? 'transform rotate-180' : ''}`}>
+                  <g transform="rotate(90 50 50)">
+                    <path d="M 85 25 A 40 40 0 1 0 85 75 Z" 
+                      fill={
+                        simulationState === 'exploded' ? '#000' : 
+                        simulationState === 'perfect' ? '#ef4444' : '#7f1d1d'
+                      } 
+                      stroke="#450a0a" strokeWidth="4"
+                    />
+                    <rect x="40" y="30" width="20" height="40" fill="rgba(0,0,0,0.3)" rx="2"/>
+                    <rect x="48" y="20" width="4" height="20" fill="rgba(0,0,0,0.5)"/>
+                  </g>
+                </svg>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </CircuitBoard>
+
+      {/* 3. CONTROLES Y FEEDBACK */}
+      <div className="mt-4 flex flex-col items-center gap-3 z-20 shrink-0">
+        <div className="flex gap-3 w-full justify-center">
+          <button 
+            onClick={handlePlay} 
+            disabled={isSimulating && simulationState === 'idle'} 
+            className="flex-1 max-w-[200px] flex justify-center items-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20 transition-all active:scale-95 disabled:opacity-50 text-sm md:text-base"
           >
-            {/* Portapilas (Izquierda) */}
-            <div className="absolute left-[2%] top-1/2 -translate-y-1/2 z-10">
-              <AnimatePresence>
-                {boardBattery && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="drop-shadow-2xl">
-                     <svg viewBox="0 0 100 160" width="70" height="110">
-                        <rect x="10" y="10" width="80" height="140" rx="10" fill="#222" stroke="#111" strokeWidth="4"/>
-                        <rect x="25" y="20" width="50" height="120" rx="5" fill="#444" />
-                        <circle cx="50" cy="35" r="8" fill="silver"/>
-                        <circle cx="50" cy="125" r="8" fill="silver"/>
-                        <text x="50" y="85" fill="#fbbf24" fontSize="16" fontWeight="bold" textAnchor="middle" transform="rotate(-90 50 85)">{boardBattery.label}</text>
-                        <text x="50" y="25" fill="#ef4444" fontSize="20" fontWeight="bold" textAnchor="middle">+</text>
-                        <text x="50" y="145" fill="#3b82f6" fontSize="24" fontWeight="bold" textAnchor="middle">-</text>
-                     </svg>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Resistencia (Arriba) */}
-            <div className="absolute top-[2%] left-1/2 -translate-x-1/2 z-10">
-              <AnimatePresence>
-                {boardResistor && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="relative drop-shadow-xl">
-                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="120" height="120" className="transform -translate-y-4">
-                        <line x1="0" y1="50" x2="100" y2="50" stroke="silver" strokeWidth="6"/>
-                        <rect x="20" y="35" width="60" height="30" rx="8" fill="#d2b48c" stroke="black" strokeWidth="2"/>
-                        <rect x="28" y="35" width="5" height="30" fill="#f44336"/> 
-                        <rect x="40" y="35" width="5" height="30" fill="#9c27b0"/> 
-                        <rect x="52" y="35" width="5" height="30" fill="#795548"/> 
-                        <rect x="68" y="35" width="5" height="30" fill="#ffd700"/> 
-                     </svg>
-                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-xs font-bold text-amber-200 bg-black/80 px-2 py-1 rounded">{boardResistor.label}</div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* LED (Derecha) */}
-            <div className="absolute right-[4%] top-1/2 -translate-y-1/2 z-10">
-              <AnimatePresence>
-                {boardLed && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="relative">
-                    <div className={`relative w-20 h-20 transition-all duration-300 z-10 ${
-                         simulationState === 'perfect' ? 'drop-shadow-[0_0_25px_rgba(239,68,68,1)]' :
-                         simulationState === 'exploded' ? 'opacity-0 scale-150 transition-all duration-100' : 'drop-shadow-lg'
-                       }`}>
-                          <svg viewBox="0 0 100 100" width="100%" height="100%" className={`${boardLed.polarity === 'reversed' ? 'transform rotate-180' : ''}`}>
-                            <g transform="rotate(90 50 50)">
-                              <path d="M 85 25 A 40 40 0 1 0 85 75 Z" 
-                                fill={
-                                  simulationState === 'exploded' ? '#000' : 
-                                  simulationState === 'perfect' ? '#ef4444' : '#7f1d1d'
-                                } 
-                                stroke="#450a0a" strokeWidth="4"
-                              />
-                              <rect x="40" y="30" width="20" height="40" fill="rgba(0,0,0,0.3)" rx="2"/>
-                              <rect x="48" y="20" width="4" height="20" fill="rgba(0,0,0,0.5)"/>
-                            </g>
-                          </svg>
-                       </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-          </CircuitBoard>
-
-          {/* CONTROLES */}
-          <div className="mt-8 flex flex-col items-center gap-4 z-20">
-            <div className="flex gap-4">
-              <button onClick={handlePlay} disabled={isSimulating && simulationState === 'idle'} className="flex items-center gap-2 px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full font-bold shadow-lg shadow-emerald-900/50 transition-all active:scale-95 disabled:opacity-50">
-                <Play size={20} fill="currentColor" /> Simular Circuito
-              </button>
-              <button onClick={handleReset} className="flex items-center gap-2 px-4 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-full font-semibold transition-all border border-neutral-700">
-                <RotateCw size={18} /> Limpiar Tablero
-              </button>
-            </div>
-
-            <AnimatePresence>
-              {feedbackMsg && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className={`max-w-md text-center p-4 rounded-xl font-medium border shadow-2xl ${
-                    simulationState === 'exploded' ? 'bg-red-950/80 text-red-300 border-red-800' :
-                    simulationState === 'perfect' ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800' :
-                    'bg-neutral-800 text-neutral-300 border-neutral-700'
-                  }`}
-                >
-                  {feedbackMsg}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+            <Play size={18} fill="currentColor" /> Simular
+          </button>
+          
+          <button 
+            onClick={handleReset} 
+            className="flex justify-center items-center px-4 py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-xl font-semibold transition-all border border-neutral-700 active:scale-95"
+            aria-label="Limpiar tablero"
+          >
+            <RotateCw size={18} />
+          </button>
         </div>
+
+        {/* Tarjeta de Feedback (Acierto o Error) */}
+        <AnimatePresence>
+          {feedbackMsg && (
+            <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className={`w-full max-w-md text-center p-3 md:p-4 rounded-xl text-sm md:text-base font-medium border shadow-2xl ${
+                simulationState === 'exploded' ? 'bg-red-950/90 text-red-300 border-red-800/50' :
+                simulationState === 'perfect' ? 'bg-emerald-950/90 text-emerald-300 border-emerald-800/50' :
+                'bg-neutral-800/90 text-neutral-300 border-neutral-700'
+              }`}
+            >
+              {feedbackMsg}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* 4. INVENTARIO INFERIOR (CARRUSEL) */}
+      <ArcadeToolbox 
+        availableItems={availableItems} 
+        onDragEnd={handleDragEnd}
+        disabled={isSimulating}
+      />
+
     </div>
   );
 }

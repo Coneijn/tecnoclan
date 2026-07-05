@@ -8,7 +8,7 @@ interface CircuitBoardProps {
   isSimulating: boolean;
   simulationState: string;
   ledPolarity?: 'correct' | 'reversed';
-  children: React.ReactNode; // Aquí inyectaremos los componentes colocados
+  children: React.ReactNode; 
 }
 
 export default function CircuitBoard({ 
@@ -19,31 +19,36 @@ export default function CircuitBoard({
   children 
 }: CircuitBoardProps) {
   
-  // Estilos dinámicos del borde según el estado
   const boardStyles = 
-    simulationState === 'exploded' ? 'border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.2)]' : 
-    simulationState === 'perfect' ? 'border-emerald-500 shadow-[0_0_50px_rgba(16,185,129,0.2)]' : 
-    isSimulating ? 'border-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'border-neutral-700';
+    simulationState === 'exploded' ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.3)]' : 
+    simulationState === 'perfect' ? 'border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.3)]' : 
+    isSimulating ? 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.2)]' : 'border-neutral-700';
 
   return (
     <div 
+      // Esta es la zona de captura. Al darle id, facilitamos el debuggeo.
+      id="drop-zone-board"
       ref={dropZoneRef}
-      className={`flex-1 bg-neutral-900 border-2 border-dashed rounded-xl p-8 relative flex flex-col items-center justify-center transition-all duration-700 ${boardStyles}`}
+      /* FIX MÓVIL 1: Redujimos el padding en móvil (p-4) y lo subimos en desktop (md:p-8). 
+         También aseguramos que ocupe todo el ancho disponible. */
+      className={`w-full flex-1 bg-neutral-900/90 backdrop-blur-sm border-2 border-dashed rounded-xl p-4 md:p-8 relative flex flex-col items-center justify-center transition-all duration-700 ${boardStyles}`}
     >
-      <div className="relative w-full max-w-lg aspect-video rounded-lg flex items-center justify-center">
+      {/* FIX MÓVIL 2: Quitamos aspect-video estricto para que en móvil no quede súper pequeño,
+          usando aspect-[4/3] en móviles y aspect-video en tablets/desktop */}
+      <div className="relative w-full max-w-lg aspect-[4/3] md:aspect-video rounded-lg flex items-center justify-center">
         
         {/* Cables Base */}
-        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 400">
-          <path d="M 150 200 L 150 100 L 650 100 L 650 300 L 150 300 Z" fill="none" stroke="#333" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet">
+          <path d="M 150 200 L 150 100 L 650 100 L 650 300 L 150 300 Z" fill="none" stroke="#333" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
           
-          {/* Animación de la corriente (Electrones) */}
+          {/* Animación de la corriente */}
           {isSimulating && (
             <motion.path 
               d={ledPolarity === 'reversed' 
-                ? "M 150 200 L 150 100 L 650 100 L 650 180" // Se detiene
-                : "M 150 200 L 150 100 L 650 100 L 650 300 L 150 300 Z" // Fluye
+                ? "M 150 200 L 150 100 L 650 100 L 650 180" 
+                : "M 150 200 L 150 100 L 650 100 L 650 300 L 150 300 Z" 
               }
-              fill="none" stroke="#fbbf24" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"
+              fill="none" stroke="#fbbf24" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"
               strokeDasharray="0 25"
               initial={{ strokeDashoffset: 1000 }}
               animate={{ strokeDashoffset: ledPolarity === 'reversed' ? 850 : 0 }}
@@ -56,7 +61,7 @@ export default function CircuitBoard({
           )}
         </svg>
 
-        {/* Aquí se renderizarán la Batería, Resistencia y LED colocados */}
+        {/* Componentes inyectados */}
         {children}
         
       </div>

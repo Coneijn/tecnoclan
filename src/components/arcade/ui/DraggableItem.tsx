@@ -13,7 +13,6 @@ interface DraggableItemProps {
 
 export default function DraggableItem({ item, onDragEnd, disabled = false, mode = 'physical' }: DraggableItemProps) {
   
-  // Le decimos a TypeScript exactamente qué valores esperar usando "as const" o un type casting
   const ledColor = (item.type === 'led' && 'color' in item ? item.color : 'red') as 'red' | 'green' | 'blue' | 'yellow' | 'orange' | 'white';
   
   const ledStyles = {
@@ -29,14 +28,22 @@ export default function DraggableItem({ item, onDragEnd, disabled = false, mode 
 
   return (
     <motion.div 
-      drag={!disabled}
-      dragSnapToOrigin
-      onDragEnd={(e, info) => onDragEnd(e, info, item)}
-      className={`relative flex flex-col items-center justify-center z-10 transition-colors rounded p-2 
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:bg-white/10'}
-        ${item.type === 'battery' ? 'bg-blue-900/40 border border-blue-500/50 w-20 h-24' : ''}
-        ${item.type === 'resistor' ? 'bg-amber-900/40 border border-amber-500/50 w-24 h-16' : ''}
-        ${item.type === 'led' ? `${currentStyle.bg} border ${currentStyle.border} w-20 h-20` : ''}
+  drag={!disabled}
+  dragSnapToOrigin
+  dragElastic={0} // Elimina la resistencia elástica, mejora el rendimiento táctil
+  whileDrag={{ scale: 1.2, zIndex: 999 }} // Manda la pieza por encima de TODO al moverse
+  onDragEnd={(e, info) => onDragEnd(e, info, item)}
+  // ... el resto de tu código
+      /* FIX MÓVIL 1: Feedback visual al tocar la pantalla (escala y eleva el z-index) */
+      whileTap={!disabled ? { scale: 1.15, zIndex: 50, cursor: 'grabbing' } : {}}
+      /* FIX MÓVIL 2: Previene que el navegador haga scroll cuando se arrastra la pieza */
+      style={{ touchAction: 'none' }}
+      /* FIX MÓVIL 3: Aumentamos el padding (p-4) y aseguramos un tamaño mínimo para el Touch Target */
+      className={`relative flex flex-col items-center justify-center z-10 transition-colors rounded-xl p-4 min-w-[64px] min-h-[64px]
+        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-grab hover:bg-white/10'}
+        ${item.type === 'battery' ? 'bg-blue-900/40 border border-blue-500/50 w-24 h-28' : ''}
+        ${item.type === 'resistor' ? 'bg-amber-900/40 border border-amber-500/50 w-28 h-20' : ''}
+        ${item.type === 'led' ? `${currentStyle.bg} border ${currentStyle.border} w-24 h-24` : ''}
       `}
     >
       {/* BATERÍA */}
@@ -56,7 +63,7 @@ export default function DraggableItem({ item, onDragEnd, disabled = false, mode 
             </svg>
           </div>
         ) : (
-          <svg viewBox="0 0 100 160" width="40" height="60" className="drop-shadow-lg">
+          <svg viewBox="0 0 100 160" width="45" height="70" className="drop-shadow-lg pointer-events-none">
             <rect x="10" y="10" width="80" height="140" rx="10" fill="#222" stroke="#111" strokeWidth="4"/>
             <rect x="25" y="20" width="50" height="120" rx="5" fill="#444" />
             <circle cx="50" cy="35" r="8" fill="silver"/>
@@ -79,8 +86,8 @@ export default function DraggableItem({ item, onDragEnd, disabled = false, mode 
           </div>
         ) : (
           <>
-            <div className="absolute -top-3 text-[10px] font-bold text-amber-200 bg-black/80 px-2 rounded">{item.label}</div>
-            <svg viewBox="0 0 100 100" width="70" height="70" className="drop-shadow-lg">
+            <div className="absolute -top-4 text-[10px] font-bold text-amber-200 bg-black/80 px-2 py-0.5 rounded pointer-events-none">{item.label}</div>
+            <svg viewBox="0 0 100 100" width="75" height="75" className="drop-shadow-lg pointer-events-none">
               <line x1="0" y1="50" x2="100" y2="50" stroke="silver" strokeWidth="6"/>
               <rect x="20" y="35" width="60" height="30" rx="8" fill="#d2b48c" stroke="black" strokeWidth="2"/>
               <rect x="28" y="35" width="5" height="30" fill={(item.bands && item.bands[0]) || "#f44336"}/> 
@@ -102,11 +109,11 @@ export default function DraggableItem({ item, onDragEnd, disabled = false, mode 
           </div>
         ) : (
           <>
-            <div className="text-[9px] text-neutral-400 absolute top-1">
+            <div className="text-[10px] text-neutral-300 absolute top-0 font-medium pointer-events-none">
               {item.polarity === 'correct' ? 'Ánodo +' : 'Cátodo -'}
             </div>
             
-            <svg viewBox="0 0 100 100" width="45" height="45" className={`mt-2 drop-shadow-md ${item.polarity === 'reversed' ? 'transform rotate-180' : ''}`}>
+            <svg viewBox="0 0 100 100" width="50" height="50" className={`mt-2 drop-shadow-md pointer-events-none ${item.polarity === 'reversed' ? 'transform rotate-180' : ''}`}>
               <g transform="rotate(90 50 50)">
                 <path d="M 85 25 A 40 40 0 1 0 85 75 Z" fill={currentStyle.fill} stroke="#111" strokeWidth="4" />
                 <rect x="40" y="30" width="20" height="40" fill="rgba(0,0,0,0.3)" rx="2"/>
@@ -114,7 +121,7 @@ export default function DraggableItem({ item, onDragEnd, disabled = false, mode 
               </g>
             </svg>
 
-            <div className="text-[9px] text-neutral-400 absolute bottom-1">
+            <div className="text-[10px] text-neutral-300 absolute bottom-0 font-medium pointer-events-none">
               {item.polarity === 'correct' ? 'Cátodo -' : 'Ánodo +'}
             </div>
           </>

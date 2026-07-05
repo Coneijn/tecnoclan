@@ -13,7 +13,6 @@ import {
   FileCode2,
   Play
 } from 'lucide-react';
-import ArcadeToolbox from '@/components/arcade/ArcadeToolbox';
 // Definimos la lista de niveles basada en tu progresión
 const ARCADE_LEVELS = [
   { 
@@ -111,8 +110,6 @@ export default function ArcadeMenuPage() {
         </p>
       </div>
 
-      {/* Cofre de Herramientas (Client Component) */}
-      <ArcadeToolbox />
       
       {/* Grid de Mosaicos */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
