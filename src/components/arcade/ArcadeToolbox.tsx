@@ -7,12 +7,14 @@ import { CircuitComponent, LedComponent } from './types'; // Ajusta la ruta a tu
 interface ArcadeToolboxProps {
   availableItems: (CircuitComponent | LedComponent)[];
   onDragEnd: (e: any, info: any, item: CircuitComponent | LedComponent) => void;
+  onItemClick?: (item: CircuitComponent | LedComponent) => void; // nuevo
   disabled?: boolean;
 }
 
 export default function ArcadeToolbox({ 
   availableItems, 
   onDragEnd,
+  onItemClick, // Recibirlo
   disabled = false
 }: ArcadeToolboxProps) {
   return (
@@ -45,11 +47,13 @@ export default function ArcadeToolbox({
               key={item.id} 
               className="snap-center shrink-0"
             >
-              <DraggableItem 
-                item={item} 
-                onDragEnd={onDragEnd}
-                disabled={disabled}
-              />
+              <DraggableItem
+  key={item.id}
+  item={item}
+  onDragEnd={onDragEnd}
+  onClick={onItemClick} // nuevo
+  disabled={disabled}
+/>
             </div>
           ))
         )}

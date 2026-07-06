@@ -5,6 +5,9 @@ import Level0 from '@/components/arcade/levels/Level0';
 import Level1 from '@/components/arcade/levels/Level1';
 import Level2 from '@/components/arcade/levels/Level2';
 import Level3 from '@/components/arcade/levels/Level3';
+import Level4 from '@/components/arcade/levels/Level4';
+import Level5 from '@/components/arcade/levels/Level5';
+import Level6 from '@/components/arcade/levels/Level6';
 // (Descomenta los demás conforme los vayas creando)
 
 export default async function MinigamePage({ 
@@ -23,7 +26,9 @@ export default async function MinigamePage({
       case '1': return <Level1 />;
       case '2': return <Level2 />;
       case '3': return <Level3 />;
-      
+      case '4': return <Level4 />;
+      case '5': return <Level5 />;
+      case '6': return <Level6 />;
       default: return (
         <div className="flex-1 flex flex-col items-center justify-center text-neutral-400 gap-4">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="stroke-neutral-600 stroke-2">

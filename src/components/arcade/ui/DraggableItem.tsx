@@ -4,14 +4,37 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { CircuitComponent, LedComponent } from '../types';
 
+// Mapeo de colores a códigos hexadecimales (para las bandas)
+const COLOR_MAP: Record<string, string> = {
+  negro: '#000000',
+  marrón: '#8B4513',
+  rojo: '#FF0000',
+  naranja: '#FFA500',
+  amarillo: '#FFFF00',
+  verde: '#008000',
+  azul: '#0000FF',
+  violeta: '#8A2BE2',
+  gris: '#808080',
+  blanco: '#FFFFFF',
+  dorado: '#D4AF37',
+  plateado: '#C0C0C0',
+};
+
 interface DraggableItemProps {
   item: CircuitComponent | LedComponent;
   onDragEnd: (e: any, info: any, item: CircuitComponent | LedComponent) => void;
+  onClick?: (item: CircuitComponent | LedComponent) => void; // ¡AGREGADO!
   disabled?: boolean;
   mode?: 'physical' | 'schematic';
 }
 
-export default function DraggableItem({ item, onDragEnd, disabled = false, mode = 'physical' }: DraggableItemProps) {
+export default function DraggableItem({ 
+  item, 
+  onDragEnd, 
+  onClick, // <-- recibir onClick
+  disabled = false, 
+  mode = 'physical' 
+}: DraggableItemProps) {
   
   const ledColor = (item.type === 'led' && 'color' in item ? item.color : 'red') as 'red' | 'green' | 'blue' | 'yellow' | 'orange' | 'white';
   
@@ -28,17 +51,14 @@ export default function DraggableItem({ item, onDragEnd, disabled = false, mode 
 
   return (
     <motion.div 
-  drag={!disabled}
-  dragSnapToOrigin
-  dragElastic={0} // Elimina la resistencia elástica, mejora el rendimiento táctil
-  whileDrag={{ scale: 1.2, zIndex: 999 }} // Manda la pieza por encima de TODO al moverse
-  onDragEnd={(e, info) => onDragEnd(e, info, item)}
-  // ... el resto de tu código
-      /* FIX MÓVIL 1: Feedback visual al tocar la pantalla (escala y eleva el z-index) */
+      drag={!disabled}
+      dragSnapToOrigin
+      dragElastic={0}
+      whileDrag={{ scale: 1.2, zIndex: 999 }}
+      onDragEnd={(e, info) => onDragEnd(e, info, item)}
+      onClick={() => onClick?.(item)} // <-- ¡AHORA SÍ!
       whileTap={!disabled ? { scale: 1.15, zIndex: 50, cursor: 'grabbing' } : {}}
-      /* FIX MÓVIL 2: Previene que el navegador haga scroll cuando se arrastra la pieza */
       style={{ touchAction: 'none' }}
-      /* FIX MÓVIL 3: Aumentamos el padding (p-4) y aseguramos un tamaño mínimo para el Touch Target */
       className={`relative flex flex-col items-center justify-center z-10 transition-colors rounded-xl p-4 min-w-[64px] min-h-[64px]
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-grab hover:bg-white/10'}
         ${item.type === 'battery' ? 'bg-blue-900/40 border border-blue-500/50 w-24 h-28' : ''}
@@ -88,49 +108,46 @@ export default function DraggableItem({ item, onDragEnd, disabled = false, mode 
           <>
             <div className="absolute -top-4 text-[10px] font-bold text-amber-200 bg-black/80 px-2 py-0.5 rounded pointer-events-none">{item.label}</div>
             <svg viewBox="0 0 100 100" width="75" height="75" className="drop-shadow-lg pointer-events-none">
+              {/* Fondo de la resistencia */}
               <line x1="0" y1="50" x2="100" y2="50" stroke="silver" strokeWidth="6"/>
               <rect x="20" y="35" width="60" height="30" rx="8" fill="#d2b48c" stroke="black" strokeWidth="2"/>
-              <rect x="28" y="35" width="5" height="30" fill={(item.bands && item.bands[0]) || "#f44336"}/> 
-              <rect x="40" y="35" width="5" height="30" fill={(item.bands && item.bands[1]) || "#9c27b0"}/> 
-              <rect x="52" y="35" width="5" height="30" fill={(item.bands && item.bands[2]) || "#795548"}/> 
-              <rect x="68" y="35" width="5" height="30" fill={(item.bands && item.bands[3]) || "#ffd700"}/> 
+              {/* Bandas dinámicas */}
+              {item.bands &&
+                item.bands.map((color, idx) => {
+                  const hex = COLOR_MAP[color] || '#888';
+                  const xPos = 28 + idx * 12;
+                  return <rect key={idx} x={xPos} y="35" width="5" height="30" fill={hex} />;
+                })}
             </svg>
           </>
         )
       )}
 
-{/* LED */}
-{item.type === 'led' && 'polarity' in item && (
-  mode === 'schematic' ? (
-    <div className="p-1">
-      <svg width="30" height="30" viewBox="0 0 24 24" className={`stroke-red-500 stroke-2 fill-none transition-transform duration-300 ${item.polarity === 'reversed' ? 'rotate-180' : ''}`}>
-        <path d="M12 2v20M8 8h8l-4 8zM17 5l3 -3M21 7l3 -3" />
-      </svg>
-    </div>
-  ) : (
-    <>
-    
-      
-      <svg 
-        viewBox="0 0 100 100" 
-        width="50" 
-        height="50" 
-        /* -rotate-90: Lo gira 90° antihorario (apunta hacia arriba)
-          rotate-90: Lo gira 90° horario (apunta hacia abajo si está invertido)
-        */
-        className={`mt-2 drop-shadow-md pointer-events-none transition-transform duration-300 ${item.polarity === 'reversed' ? 'rotate-90' : '-rotate-90'}`}
-      >
-        <g transform="rotate(90 50 50)">
-          <path d="M 85 25 A 40 40 0 1 0 85 75 Z" fill={currentStyle.fill} stroke="#111" strokeWidth="4" />
-          <rect x="40" y="30" width="20" height="40" fill="rgba(0,0,0,0.3)" rx="2"/>
-          <rect x="48" y="20" width="4" height="20" fill="rgba(0,0,0,0.5)"/>
-        </g>
-      </svg>
-
-      
-    </>
-  )
-)}
+      {/* LED */}
+      {item.type === 'led' && 'polarity' in item && (
+        mode === 'schematic' ? (
+          <div className="p-1">
+            <svg width="30" height="30" viewBox="0 0 24 24" className={`stroke-red-500 stroke-2 fill-none transition-transform duration-300 ${item.polarity === 'reversed' ? 'rotate-180' : ''}`}>
+              <path d="M12 2v20M8 8h8l-4 8zM17 5l3 -3M21 7l3 -3" />
+            </svg>
+          </div>
+        ) : (
+          <>
+            <svg 
+              viewBox="0 0 100 100" 
+              width="50" 
+              height="50" 
+              className={`mt-2 drop-shadow-md pointer-events-none transition-transform duration-300 ${item.polarity === 'reversed' ? 'rotate-90' : '-rotate-90'}`}
+            >
+              <g transform="rotate(90 50 50)">
+                <path d="M 85 25 A 40 40 0 1 0 85 75 Z" fill={currentStyle.fill} stroke="#111" strokeWidth="4" />
+                <rect x="40" y="30" width="20" height="40" fill="rgba(0,0,0,0.3)" rx="2"/>
+                <rect x="48" y="20" width="4" height="20" fill="rgba(0,0,0,0.5)"/>
+              </g>
+            </svg>
+          </>
+        )
+      )}
     </motion.div>
   );
 }
