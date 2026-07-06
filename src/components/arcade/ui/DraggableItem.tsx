@@ -99,34 +99,38 @@ export default function DraggableItem({ item, onDragEnd, disabled = false, mode 
         )
       )}
 
-      {/* LED */}
-      {item.type === 'led' && 'polarity' in item && (
-        mode === 'schematic' ? (
-          <div className="p-1">
-            <svg width="30" height="30" viewBox="0 0 24 24" className={`stroke-red-500 stroke-2 fill-none ${item.polarity === 'reversed' ? 'transform rotate-180' : ''}`}>
-              <path d="M12 2v20M8 8h8l-4 8zM17 5l3 -3M21 7l3 -3" />
-            </svg>
-          </div>
-        ) : (
-          <>
-            <div className="text-[10px] text-neutral-300 absolute top-0 font-medium pointer-events-none">
-              {item.polarity === 'correct' ? 'Ánodo +' : 'Cátodo -'}
-            </div>
-            
-            <svg viewBox="0 0 100 100" width="50" height="50" className={`mt-2 drop-shadow-md pointer-events-none ${item.polarity === 'reversed' ? 'transform rotate-180' : ''}`}>
-              <g transform="rotate(90 50 50)">
-                <path d="M 85 25 A 40 40 0 1 0 85 75 Z" fill={currentStyle.fill} stroke="#111" strokeWidth="4" />
-                <rect x="40" y="30" width="20" height="40" fill="rgba(0,0,0,0.3)" rx="2"/>
-                <rect x="48" y="20" width="4" height="20" fill="rgba(0,0,0,0.5)"/>
-              </g>
-            </svg>
+{/* LED */}
+{item.type === 'led' && 'polarity' in item && (
+  mode === 'schematic' ? (
+    <div className="p-1">
+      <svg width="30" height="30" viewBox="0 0 24 24" className={`stroke-red-500 stroke-2 fill-none transition-transform duration-300 ${item.polarity === 'reversed' ? 'rotate-180' : ''}`}>
+        <path d="M12 2v20M8 8h8l-4 8zM17 5l3 -3M21 7l3 -3" />
+      </svg>
+    </div>
+  ) : (
+    <>
+    
+      
+      <svg 
+        viewBox="0 0 100 100" 
+        width="50" 
+        height="50" 
+        /* -rotate-90: Lo gira 90° antihorario (apunta hacia arriba)
+          rotate-90: Lo gira 90° horario (apunta hacia abajo si está invertido)
+        */
+        className={`mt-2 drop-shadow-md pointer-events-none transition-transform duration-300 ${item.polarity === 'reversed' ? 'rotate-90' : '-rotate-90'}`}
+      >
+        <g transform="rotate(90 50 50)">
+          <path d="M 85 25 A 40 40 0 1 0 85 75 Z" fill={currentStyle.fill} stroke="#111" strokeWidth="4" />
+          <rect x="40" y="30" width="20" height="40" fill="rgba(0,0,0,0.3)" rx="2"/>
+          <rect x="48" y="20" width="4" height="20" fill="rgba(0,0,0,0.5)"/>
+        </g>
+      </svg>
 
-            <div className="text-[10px] text-neutral-300 absolute bottom-0 font-medium pointer-events-none">
-              {item.polarity === 'correct' ? 'Cátodo -' : 'Ánodo +'}
-            </div>
-          </>
-        )
-      )}
+      
+    </>
+  )
+)}
     </motion.div>
   );
 }

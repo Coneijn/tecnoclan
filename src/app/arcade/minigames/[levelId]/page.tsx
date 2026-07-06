@@ -2,6 +2,9 @@ import React from 'react';
 import Link from 'next/link';
 // Importación de los niveles
 import Level0 from '@/components/arcade/levels/Level0';
+import Level1 from '@/components/arcade/levels/Level1';
+import Level2 from '@/components/arcade/levels/Level2';
+import Level3 from '@/components/arcade/levels/Level3';
 // (Descomenta los demás conforme los vayas creando)
 
 export default async function MinigamePage({ 
@@ -17,6 +20,9 @@ export default async function MinigamePage({
   const renderLevel = () => {
     switch (levelId) {
       case '0': return <Level0 />;
+      case '1': return <Level1 />;
+      case '2': return <Level2 />;
+      case '3': return <Level3 />;
       
       default: return (
         <div className="flex-1 flex flex-col items-center justify-center text-neutral-400 gap-4">
