@@ -1,5 +1,3 @@
-// /app/api/auth/google/callback/route.ts
-// Recibe el callback de Google, intercambia el code por tokens
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -40,28 +38,58 @@ export async function GET(request: NextRequest) {
     })
     const userInfo = await userResponse.json()
 
-    console.log('[Google OAuth] Usuario autenticado:', userInfo.email)
-
-    // Enviar tokens a OpenClaw via webhook
-    const openclawWebhookUrl = process.env.OPENCLAW_WEBHOOK_URL
-    if (openclawWebhookUrl) {
-      await fetch(openclawWebhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event: 'google_oauth_success',
-          email: userInfo.email,
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          expires_in: tokens.expires_in,
-          scope: tokens.scope,
-        }),
-      })
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>OAuth Tokens</title>
+  <style>
+    body { font-family: monospace; padding: 2rem; background: #1a1a1a; color: #00ff00; }
+    h2 { color: #fff; }
+    .token { background: #2a2a2a; padding: 1rem; border-radius: 6px; margin: 1rem 0; word-break: break-all; }
+    label { color: #aaa; font-size: 0.8rem; display: block; margin-bottom: 4px; }
+    .copy-btn {
+      background: #333; color: #fff; border: 1px solid #555;
+      padding: 4px 10px; border-radius: 4px; cursor: pointer; margin-top: 6px;
     }
+    .copy-btn:hover { background: #444; }
+    .warning { background: #3a1a00; color: #ffaa00; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h2>✅ Google OAuth exitoso</h2>
+  <div class="warning">⚠️ Copia estos tokens y pásalos a OpenClaw. Borra esta página del historial después.</div>
 
-    return NextResponse.redirect(
-      new URL(`/auth/success?email=${encodeURIComponent(userInfo.email)}`, request.url)
-    )
+  <p><strong>Email:</strong> ${userInfo.email}</p>
+
+  <div class="token">
+    <label>ACCESS TOKEN</label>
+    <div id="at">${tokens.access_token}</div>
+    <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('at').innerText)">Copiar</button>
+  </div>
+
+  <div class="token">
+    <label>REFRESH TOKEN</label>
+    <div id="rt">${tokens.refresh_token ?? '(no disponible)'}</div>
+    <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('rt').innerText)">Copiar</button>
+  </div>
+
+  <div class="token">
+    <label>EXPIRES IN (segundos)</label>
+    <div>${tokens.expires_in}</div>
+  </div>
+
+  <div class="token">
+    <label>SCOPE</label>
+    <div>${tokens.scope}</div>
+  </div>
+</body>
+</html>`
+
+    return new NextResponse(html, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html' },
+    })
   } catch (err) {
     console.error('[Google OAuth] Error inesperado:', err)
     return NextResponse.redirect(new URL('/auth/error?reason=unexpected', request.url))
