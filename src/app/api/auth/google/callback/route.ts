@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const TOKEN_SERVICE_URL = process.env.TOKEN_SERVICE_URL!
+const TOKEN_SERVICE_SECRET = process.env.TOKEN_SERVICE_SECRET!
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
@@ -36,60 +39,44 @@ export async function GET(request: NextRequest) {
     const userResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     })
+
+    if (!userResponse.ok) {
+      console.error('[Google OAuth] Error al obtener userinfo')
+      return NextResponse.redirect(new URL('/auth/error?reason=userinfo_failed', request.url))
+    }
+
     const userInfo = await userResponse.json()
 
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>OAuth Tokens</title>
-  <style>
-    body { font-family: monospace; padding: 2rem; background: #1a1a1a; color: #00ff00; }
-    h2 { color: #fff; }
-    .token { background: #2a2a2a; padding: 1rem; border-radius: 6px; margin: 1rem 0; word-break: break-all; }
-    label { color: #aaa; font-size: 0.8rem; display: block; margin-bottom: 4px; }
-    .copy-btn {
-      background: #333; color: #fff; border: 1px solid #555;
-      padding: 4px 10px; border-radius: 4px; cursor: pointer; margin-top: 6px;
-    }
-    .copy-btn:hover { background: #444; }
-    .warning { background: #3a1a00; color: #ffaa00; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; }
-  </style>
-</head>
-<body>
-  <h2>✅ Google OAuth exitoso</h2>
-  <div class="warning">⚠️ Copia estos tokens y pásalos a OpenClaw. Borra esta página del historial después.</div>
-
-  <p><strong>Email:</strong> ${userInfo.email}</p>
-
-  <div class="token">
-    <label>ACCESS TOKEN</label>
-    <div id="at">${tokens.access_token}</div>
-    <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('at').innerText)">Copiar</button>
-  </div>
-
-  <div class="token">
-    <label>REFRESH TOKEN</label>
-    <div id="rt">${tokens.refresh_token ?? '(no disponible)'}</div>
-    <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('rt').innerText)">Copiar</button>
-  </div>
-
-  <div class="token">
-    <label>EXPIRES IN (segundos)</label>
-    <div>${tokens.expires_in}</div>
-  </div>
-
-  <div class="token">
-    <label>SCOPE</label>
-    <div>${tokens.scope}</div>
-  </div>
-</body>
-</html>`
-
-    return new NextResponse(html, {
-      status: 200,
-      headers: { 'Content-Type': 'text/html' },
+    const saveResponse = await fetch(TOKEN_SERVICE_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${TOKEN_SERVICE_SECRET}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id:       userInfo.email,
+        email:         userInfo.email,
+        access_token:  tokens.access_token,
+        refresh_token: tokens.refresh_token ?? null,
+        expiry_date:   tokens.expires_in
+          ? Date.now() + tokens.expires_in * 1000
+          : null,
+        scope: tokens.scope ?? null,
+      }),
     })
+
+    if (!saveResponse.ok) {
+      const saveErr = await saveResponse.text()
+      console.error('[Google OAuth] Error al guardar tokens:', saveErr)
+      return NextResponse.redirect(new URL('/auth/error?reason=token_save_failed', request.url))
+    }
+
+    console.log(`[Google OAuth] Tokens guardados para: ${userInfo.email}`)
+
+    const successUrl = new URL('/auth/success', request.url)
+    successUrl.searchParams.set('email', userInfo.email)
+    return NextResponse.redirect(successUrl)
+
   } catch (err) {
     console.error('[Google OAuth] Error inesperado:', err)
     return NextResponse.redirect(new URL('/auth/error?reason=unexpected', request.url))
